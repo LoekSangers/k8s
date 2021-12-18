@@ -1,0 +1,62 @@
+kind: Namespace
+apiVersion: v1
+metadata:
+  name: perforce
+  labels:
+    name: perforce
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: perforce
+  namespace: perforce
+spec:
+  selector:
+    matchLabels:
+      run: perforce
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        run: perforce
+    spec:
+      containers:
+      - lifecycle:
+          preStop:
+            exec: 
+              command: ["kill", "-2", "8"]
+        name: perforce
+        image: ghcr.io/loeksangers/perforce-server:master
+        imagePullPolicy: Always
+        envFrom:
+          - configMapRef:
+              name: perforce-config
+        ports:
+        - containerPort: 2456
+        volumeMounts:
+        - mountPath: /srv/p4d
+          name: perforce-data
+      terminationGracePeriodSeconds: 60
+      volumes:
+      - name: perforce-data
+        nfs:
+          server: 192.168.2.110
+          path: /perforce
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: perforce
+  namespace: perforce
+  labels:
+    run: perforce
+spec:
+  type: LoadBalancer
+  loadBalancerIP: 192.168.2.105
+  ports:
+  - port: 2456
+    targetPort: 2456
+    protocol: UDP
+    name: steam-server
+  selector:
+    run: perforce
