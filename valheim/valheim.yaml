@@ -1,0 +1,72 @@
+kind: Namespace
+apiVersion: v1
+metadata:
+  name: valheim
+  labels:
+    name: valheim
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: valheim
+  namespace: valheim
+spec:
+  selector:
+    matchLabels:
+      run: valheim
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        run: valheim
+    spec:
+      containers:
+      - lifecycle:
+          preStop:
+            exec: 
+              command: ["kill", "-2", "8"]
+        name: valheim
+        image: ghcr.io/loeksangers/valheim-server:master
+        imagePullPolicy: Always
+        envFrom:
+          - configMapRef:
+              name: valheim-config
+        ports:
+        - containerPort: 2456
+        - containerPort: 2457
+        - containerPort: 2458
+        volumeMounts:
+        - mountPath: /root/.config/unity3d/IronGate/Valheim/
+          name: valheim-data
+      terminationGracePeriodSeconds: 60
+      volumes:
+      - name: valheim-data
+        nfs:
+          server: 192.168.2.110
+          path: /valheim
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: valheim
+  namespace: valheim
+  labels:
+    run: valheim
+spec:
+  type: LoadBalancer
+  loadBalancerIP: 192.168.2.199
+  ports:
+  - port: 2456
+    targetPort: 2456
+    protocol: UDP
+    name: steam-server 
+  - port: 2457
+    targetPort: 2457
+    protocol: UDP
+    name: valheim-server
+  - port: 2458
+    targetPort: 2458
+    protocol: UDP
+    name: valheim-server-internal
+  selector:
+    run: valheim

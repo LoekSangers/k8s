@@ -1,0 +1,64 @@
+kind: Namespace
+apiVersion: v1
+metadata:
+  name: nfs
+  labels:
+    name: nfs
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nfs
+  namespace: nfs
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      run: nfs
+  template:
+    metadata:
+      labels:
+        run: nfs
+    spec:
+      nodeSelector:
+        nfs-home: "yes"
+      containers:
+      - name: nfs
+        image: k8s.gcr.io/volume-nfs:0.8
+        ports:
+          - name: nfs
+            containerPort: 2049
+          - name: mountd
+            containerPort: 20048
+          - name: rpcbind
+            containerPort: 111
+        securityContext:
+          privileged: true
+        volumeMounts:
+          - mountPath: /exports
+            name: mypvc
+      volumes:
+        - name: mypvc
+          hostPath:
+            path: /data
+            type: Directory
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: nfs
+  namespace: nfs
+  labels:
+    run: nfs
+spec:
+  type: LoadBalancer
+  loadBalancerIP: 192.168.2.110
+  ports:
+    - name: nfs
+      port: 2049
+    - name: mountd
+      port: 20048
+    - name: rpcbind
+      port: 111
+  selector:
+    run: nfs
