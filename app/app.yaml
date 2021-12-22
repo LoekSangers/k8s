@@ -1,0 +1,85 @@
+kind: Namespace
+apiVersion: v1
+metadata:
+  name: app
+  labels:
+    name: app
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app
+  namespace: app
+spec:
+  revisionHistoryLimit: 0 
+  selector:
+    matchLabels:
+      run: app
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        run: app
+    spec:
+      containers:
+      - name: app
+        image: nginx:latest
+        imagePullPolicy: Always
+        envFrom:
+          - configMapRef:
+              name: app-config
+        ports:
+        - containerPort: 80
+      terminationGracePeriodSeconds: 60
+      volumes:
+      - name: app-data
+        nfs:
+          server: 192.168.2.110
+          path: /app
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: app
+  namespace: app
+  labels:
+    run: app
+spec:
+  type: ClusterIP
+  ports:
+  - port: 80
+    targetPort: 80
+    protocol: TCP
+    name: http
+  selector:
+    run: app
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: app-ingress
+  namespace: app
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-production"
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: app.loeksangers.nl
+    http:
+      paths:
+      - backend:
+          service:
+            name: app
+            port:
+              number: 80
+        path: /
+        pathType: Prefix
+# This section is only required if TLS is to be enabled for the Ingress
+  tls:
+    - hosts:
+        - app.loeksangers.nl
+      secretName: app.loeksangers.nl-tls
+status:
+  loadBalancer:
+    ingress:
+    - ip: 192.168.2.109
