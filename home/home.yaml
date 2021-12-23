@@ -23,7 +23,7 @@ spec:
     spec:
       containers:
       - name: home
-        image: nginx:latest
+        image: ghcr.io/loeksangers/personal-website:main
         imagePullPolicy: Always
         ports:
         - containerPort: 80
