@@ -58,6 +58,7 @@ metadata:
   namespace: home
   annotations:
     cert-manager.io/cluster-issuer: "letsencrypt-production"
+    nginx.ingress.kubernetes.io/from-to-www-redirect: "true"
 spec:
   ingressClassName: nginx
   rules:
@@ -75,6 +76,7 @@ spec:
   tls:
     - hosts:
         - loeksangers.nl
+        - www.loeksangers.nl
       secretName: loeksangers.nl-tls
 status:
   loadBalancer:
