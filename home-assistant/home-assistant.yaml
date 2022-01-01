@@ -1,0 +1,75 @@
+kind: Namespace
+apiVersion: v1
+metadata:
+  name: home-assistant
+  labels:
+    name: home-assistant
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: home-assistant
+  namespace: home-assistant
+  labels:
+    name: home-assistant
+spec:
+  ports:
+  - port: 8123
+    targetPort: 8123
+    protocol: TCP
+    name: http
+  selector:
+    run: home-assistant
+---
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: home-assistant
+  namespace: home-assistant
+  labels:
+    name: home-assistant
+subsets: 
+- addresses:
+  - ip: 192.168.2.1 
+  ports:
+  - port: 8123
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: home-assistant-ingress
+  namespace: home-assistant
+  labels:
+    name: home-assistant
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-production"
+    nginx.ingress.kubernetes.io/use-regex: "true"
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: hassio.loeksangers.nl
+    http:
+      paths:
+      - backend:
+          service:
+            name: home-assistant
+            port:
+              number: 8123
+        path: /api/google_assistant(.*)
+        pathType: Prefix
+      - backend:
+          service:
+            name: home-assistant
+            port:
+              number: 8123
+        path: /auth/(.*)
+        pathType: Prefix
+# This section is only required if TLS is to be enabled for the Ingress
+  tls:
+    - hosts:
+        - hassio.loeksangers.nl
+      secretName: hassio.loeksangers.nl-tls
+status:
+  loadBalancer:
+    ingress:
+    - ip: 192.168.2.109
